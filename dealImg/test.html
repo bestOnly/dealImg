@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <!-- <form action="http://localhost:3000/getImg" method="get">
+    账户: <input name="username">
+    密码: <input name="password">
+    <input type="submit" id="submit">
+  </form> -->
+  <input type="file" id="inputImage" onchange="selectImg()">
+  <img src="" alt="" id="showImage">
+  <button id="seeImg">显示图片</button>
+
+  <script src="./js/jquery.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/pako/1.0.9/pako.js"></script>
+  <script>
+
+    var zipImg;
+    function selectImg() {
+      var objUrl = inputImage.files[0];
+      console.log(objUrl);
+      var reader = new FileReader();
+      //读取文件,保存为base64 格式
+      reader.readAsDataURL(objUrl);
+      reader.onload = function (evt) {
+        imageString = evt.target.result;
+        var windowURL = window.URL || window.webkitURL;
+        //createObjectURL创建一个指向该参数对象(图片)的URL
+        var dataURL = windowURL.createObjectURL(objUrl);
+        console.log(dataURL);
+        zipImg = zip(dataURL)
+        console.log(zipImg);
+      }
+      //   var blob = new Blob([objUrl], { type: 'text/plain' })    //创建Blob对象
+      //   var read = new FileReader();                 //创建读取器对象FileReader
+      //   read.readAsText(blob);                       //开始读取文件
+      //   read.οnlοad = function () {                //数据读完会触发onload事件
+      //     console.log(1);
+      //     console.log(read.result);      //read有个result属性存放这结果，从result获取到数据
+      //   }
+    };
+
+    seeImg.onclick = function() {
+      $.get({
+          url: `http://localhost:3000/getImg`,
+          data: { zipImg: zipImg },
+          success: function (data) {
+            console.log(data);
+            const result = JSON.parse(data);
+            console.log(result);
+            
+            var dataURL = unzip(result.zipImg)
+            console.log(dataURL);
+            $("#showImage").attr("src", dataURL);
+            console.log('发送成功');
+          }
+        })
+    }
+
+    function unzip(b64Data) {
+      var strData = atob(b64Data);
+      var charData = strData.split('').map(function (x) { return x.charCodeAt(0); });
+      // Turn number array into byte-array
+      var binData = new Uint8Array(charData);
+      // // unzip
+      var data = pako.inflate(binData);
+      strData = String.fromCharCode.apply(null, new Uint16Array(data));
+      return decodeURIComponent(strData);
+    }
+
+    function zip(str) {
+      var binaryString = pako.gzip(encodeURIComponent(str), { to: 'string' })
+      return btoa(binaryString);
+    }
+
+
+
+    // 将符合字节流的string转化成Blob对象
+    function binaryToBlob(data) {
+      var bb = new BlobBuilder();
+      var arr = new Uint8Array(data.length);
+      for (var i = 0, l = data.length; i < l; i++) {
+        arr[i] = data.charCodeAt(i);
+      }
+      bb.append(arr.buffer);
+      return bb.getBlob();
+    };
+
+    /**
+     * 根据URL获取图片的Blob对象
+     * 
+     * @param {String} url
+     * @return {Blob} 
+     * @api public
+     */
+    function getImageBlob(url) {
+      var r = new XMLHttpRequest();
+      r.open("GET", url, false);
+      // 详细请查看: https://developer.mozilla.org/En/XMLHttpRequest/Using_XMLHttpRequest#Receiving_binary_data
+      // XHR binary charset opt by Marcus Granado 2006 [http://mgran.blogspot.com]
+      r.overrideMimeType('text/plain; charset=x-user-defined');
+      r.send(null);
+      var blob = binaryToBlob(r.responseText);
+      blob.name = blob.fileName = url.substring(url.lastIndexOf('/') + 1);
+      blob.fileType = "image/jpeg"; //"image/octet-stream";
+      return blob;
+    };
+  </script>
+</body>
+
+</html>
